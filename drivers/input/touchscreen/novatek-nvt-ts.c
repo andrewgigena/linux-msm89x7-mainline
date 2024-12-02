@@ -186,16 +186,25 @@ static irqreturn_t nvt_ts_irq(int irq, void *dev_id)
 }
 
 static void nvt_ts_hw_reset_to_state(struct nvt_ts_data *data, enum nvt_ts_hw_state end_state)
-{
-	int gpio_state = gpiod_get_value_cansleep(data->reset_gpio);
-	gpiod_set_value_cansleep(data->reset_gpio, gpio_state);
+{	
+	int reset_value;
+	if (data->chip_data->init_reset_state == GPIOD_OUT_HIGH) {
+		reset_value = 1;
+	} else {
+		reset_value = 0;
+	}
+
+	gpiod_set_value_cansleep(data->reset_gpio, reset_value);
 	msleep(30);
-	gpiod_set_value_cansleep(data->reset_gpio, !gpio_state);
+	gpiod_set_value_cansleep(data->reset_gpio, !reset_value);
 	msleep(30);
 	if (end_state == NVT_TS_HW_STATE_RUNNING) {
-		gpiod_set_value_cansleep(data->reset_gpio, gpio_state);
+		gpiod_set_value_cansleep(data->reset_gpio, reset_value);
 		msleep(30);
 	}
+
+	reset_value = gpiod_get_value_cansleep(data->reset_gpio);
+	dev_info(&data->client->dev, "GPIO after reset %s\n", reset_value ? "HIGH" : "LOW");
 }
 
 
