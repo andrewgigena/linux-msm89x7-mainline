@@ -48,7 +48,7 @@
 				 <&gcc GCC_MDSS_PCLK0_CLK>,
 				 <&gcc GCC_MDSS_ESC0_CLK>;
 			power-domains = <&gcc MDSS_GDSC>;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 	
@@ -144,7 +144,7 @@
 &pmi8950_wled {
 	qcom,num-strings = <2>;
 	qcom,external-pfet;
-	// qcom,cabc;
+	qcom,cabc;
 	qcom,current-limit-microamp = <20000>;
 	qcom,ovp-millivolt = <29600>;
 	
@@ -176,7 +176,7 @@
 
 &mdss_dsi0_phy {
 	vddio-supply = <&pm8937_l6>;
-	qcom,dsi-phy-regulator-ldo-mode;
+	// qcom,dsi-phy-regulator-ldo-mode;
 };
 
 &pm8937_resin {
