@@ -204,7 +204,6 @@ static void nvt_ts_hw_reset_to_state(struct nvt_ts_data *data, enum nvt_ts_hw_st
 	}
 
 	reset_value = gpiod_get_value_cansleep(data->reset_gpio);
-	dev_info(&data->client->dev, "GPIO after reset %s\n", reset_value ? "HIGH" : "LOW");
 }
 
 
