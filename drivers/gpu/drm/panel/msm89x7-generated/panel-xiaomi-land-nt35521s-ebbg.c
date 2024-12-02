@@ -5,18 +5,18 @@
 
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
+#include <linux/mod_devicetable.h>
 #include <linux/module.h>
-#include <linux/of.h>
 
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
+#include <drm/drm_probe_helper.h>
 
 struct nt35521s_ebbg {
 	struct drm_panel panel;
 	struct mipi_dsi_device *dsi;
 	struct gpio_desc *reset_gpio;
-	bool prepared;
 };
 
 static inline struct nt35521s_ebbg *to_nt35521s_ebbg(struct drm_panel *panel)
@@ -36,60 +36,40 @@ static void nt35521s_ebbg_reset(struct nt35521s_ebbg *ctx)
 
 static int nt35521s_ebbg_on(struct nt35521s_ebbg *ctx)
 {
-	struct mipi_dsi_device *dsi = ctx->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
 
-	mipi_dsi_generic_write_seq(dsi, 0xf0, 0x55, 0xaa, 0x52, 0x08, 0x00);
-	mipi_dsi_generic_write_seq(dsi, 0xb1, 0x6c);
-	mipi_dsi_generic_write_seq(dsi, 0xc8, 0x83);
-	mipi_dsi_generic_write_seq(dsi, 0x6f, 0x02);
-	mipi_dsi_generic_write_seq(dsi, 0xb2, 0x02);
-	mipi_dsi_generic_write_seq(dsi, 0xff, 0xaa, 0x55, 0x25, 0x01);
-	mipi_dsi_generic_write_seq(dsi, 0x6f, 0x10);
-	mipi_dsi_generic_write_seq(dsi, 0xf7, 0x1d);
-	mipi_dsi_generic_write_seq(dsi, 0x6f, 0x14);
-	mipi_dsi_generic_write_seq(dsi, 0xf7, 0x40);
-	mipi_dsi_generic_write_seq(dsi, 0xff, 0xaa, 0x55, 0x25, 0x00);
-	mipi_dsi_generic_write_seq(dsi, 0x35, 0x00);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xf0,
+					 0x55, 0xaa, 0x52, 0x08, 0x00);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xb1, 0x6c);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xc8, 0x83);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x6f, 0x02);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xb2, 0x02);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xff,
+					 0xaa, 0x55, 0x25, 0x01);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x6f, 0x10);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xf7, 0x1d);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x6f, 0x14);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xf7, 0x40);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xff,
+					 0xaa, 0x55, 0x25, 0x00);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x35, 0x00);
+	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
+	mipi_dsi_msleep(&dsi_ctx, 120);
+	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
+	mipi_dsi_msleep(&dsi_ctx, 32);
 
-	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to exit sleep mode: %d\n", ret);
-		return ret;
-	}
-	msleep(120);
-
-	ret = mipi_dsi_dcs_set_display_on(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to set display on: %d\n", ret);
-		return ret;
-	}
-	msleep(32);
-
-	return 0;
+	return dsi_ctx.accum_err;
 }
 
 static int nt35521s_ebbg_off(struct nt35521s_ebbg *ctx)
 {
-	struct mipi_dsi_device *dsi = ctx->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
 
-	ret = mipi_dsi_dcs_set_display_off(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to set display off: %d\n", ret);
-		return ret;
-	}
+	mipi_dsi_dcs_set_display_off_multi(&dsi_ctx);
+	mipi_dsi_dcs_enter_sleep_mode_multi(&dsi_ctx);
+	mipi_dsi_msleep(&dsi_ctx, 120);
 
-	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
-	if (ret < 0) {
-		dev_err(dev, "Failed to enter sleep mode: %d\n", ret);
-		return ret;
-	}
-	msleep(120);
-
-	return 0;
+	return dsi_ctx.accum_err;
 }
 
 static int nt35521s_ebbg_prepare(struct drm_panel *panel)
@@ -97,9 +77,6 @@ static int nt35521s_ebbg_prepare(struct drm_panel *panel)
 	struct nt35521s_ebbg *ctx = to_nt35521s_ebbg(panel);
 	struct device *dev = &ctx->dsi->dev;
 	int ret;
-
-	if (ctx->prepared)
-		return 0;
 
 	nt35521s_ebbg_reset(ctx);
 
@@ -110,7 +87,6 @@ static int nt35521s_ebbg_prepare(struct drm_panel *panel)
 		return ret;
 	}
 
-	ctx->prepared = true;
 	return 0;
 }
 
@@ -120,16 +96,12 @@ static int nt35521s_ebbg_unprepare(struct drm_panel *panel)
 	struct device *dev = &ctx->dsi->dev;
 	int ret;
 
-	if (!ctx->prepared)
-		return 0;
-
 	ret = nt35521s_ebbg_off(ctx);
 	if (ret < 0)
 		dev_err(dev, "Failed to un-initialize panel: %d\n", ret);
 
 	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
 
-	ctx->prepared = false;
 	return 0;
 }
 
@@ -145,25 +117,13 @@ static const struct drm_display_mode nt35521s_ebbg_mode = {
 	.vtotal = 1280 + 35 + 2 + 28,
 	.width_mm = 62,
 	.height_mm = 110,
+	.type = DRM_MODE_TYPE_DRIVER,
 };
 
 static int nt35521s_ebbg_get_modes(struct drm_panel *panel,
 				   struct drm_connector *connector)
 {
-	struct drm_display_mode *mode;
-
-	mode = drm_mode_duplicate(connector->dev, &nt35521s_ebbg_mode);
-	if (!mode)
-		return -ENOMEM;
-
-	drm_mode_set_name(mode);
-
-	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
-	connector->display_info.width_mm = mode->width_mm;
-	connector->display_info.height_mm = mode->height_mm;
-	drm_mode_probed_add(connector, mode);
-
-	return 1;
+	return drm_connector_helper_get_modes_fixed(connector, &nt35521s_ebbg_mode);
 }
 
 static const struct drm_panel_funcs nt35521s_ebbg_panel_funcs = {
@@ -199,6 +159,7 @@ static int nt35521s_ebbg_probe(struct mipi_dsi_device *dsi)
 
 	drm_panel_init(&ctx->panel, dev, &nt35521s_ebbg_panel_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
+	ctx->panel.prepare_prev_first = true;
 
 	ret = drm_panel_of_backlight(&ctx->panel);
 	if (ret)
@@ -208,9 +169,8 @@ static int nt35521s_ebbg_probe(struct mipi_dsi_device *dsi)
 
 	ret = mipi_dsi_attach(dsi);
 	if (ret < 0) {
-		dev_err(dev, "Failed to attach to DSI host: %d\n", ret);
 		drm_panel_remove(&ctx->panel);
-		return ret;
+		return dev_err_probe(dev, ret, "Failed to attach to DSI host\n");
 	}
 
 	return 0;
