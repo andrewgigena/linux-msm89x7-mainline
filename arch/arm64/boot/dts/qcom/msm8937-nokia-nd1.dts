@@ -69,6 +69,7 @@
 		
 		
 		reserved@84a00000 {
+			label = "QSEECOM";
 			reg = <0x0 0x84a00000 0x0 0x1900000>;
 			no-map;
 		};
@@ -77,6 +78,73 @@
 			reg = <0x0 0x90000000 0x0 (720 * 1280 * 3)>;
 			no-map;
 		};
+
+		// Downstream memory regions below:
+		other_ext_region@0 {
+			reg = <0x00 0x85b00000 0x00 0xd00000>;
+			no-map;
+		};
+
+		modem_region@0 {
+			reg = <0x00 0x86800000 0x00 0x5000000>;
+			no-map;
+		};
+
+		adsp_fw_region@0 {
+			reg = <0x00 0x8b800000 0x00 0x1100000>;
+			no-map;
+		};
+
+		// wcnss_fw_region@0 {
+		// 	reg = <0x00 0x8c900000 0x00 0x700000>;
+		// 	no-map;
+		// };
+
+		venus_region@0 {
+			alloc-ranges = <0x00 0x80000000 0x00 0x10000000>;
+			alignment = <0x00 0x400000>;
+			size = <0x00 0x800000>;
+			no-map;
+		};
+
+		secure_region@0 {
+			alignment = <0x00 0x400000>;
+			size = <0x00 0x7000000>;
+			no-map;
+		};
+
+		qseecom_region@0 {
+			alignment = <0x00 0x400000>;
+			size = <0x00 0x1000000>;
+			no-map;
+		};
+
+		adsp_region@0 {
+			alignment = <0x00 0x400000>;
+			size = <0x00 0x400000>;
+			no-map;
+		};
+
+		// splash_region@83000000 {
+		// 	reg = <0x00 0x90000000 0x00 0x1400000>;
+		// 	no-map;
+		// };
+
+		tzapp_region@0 {
+			reg = <0x00 0xc3c00000 0x00 0x1e00000>;
+			no-map;
+		};
+
+		fih_region@0 {
+			reg = <0x00 0xc3200000 0x00 0x900000>;
+			no-map;
+		};
+
+		pstore_reserve_mem_region@0 {
+			reg = <0x00 0xc3b00000 0x00 0x100000>;
+			no-map;
+		};
+		
 	};
 	
 	vph_pwr: vph-pwr-regulator {
