@@ -55,9 +55,9 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 		
-		button-volup {
-			label = "Volume Up";
-			linux,code = <KEY_VOLUMEUP>;
+		button-voldown {
+			label = "Volume Down";
+			linux,code = <KEY_VOLUMEDOWN>;
 			gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
 			debounce-interval = <15>;
 		};
